@@ -1,0 +1,111 @@
+import torch
+from torch import nn
+import torch.nn.functional as F
+from torchvision import models
+
+
+
+class Vgg16_bn(torch.nn.Module):
+    def __init__(self):
+        super(Vgg16_bn, self).__init__()
+        vgg_pretrained_features = models.vgg16_bn().features
+        self.slice1 = torch.nn.Sequential()
+        self.slice2 = torch.nn.Sequential()
+        self.slice3 = torch.nn.Sequential()
+        self.slice4 = torch.nn.Sequential()
+        self.slice5 = torch.nn.Sequential()
+        for x in range(12):         # conv2_2
+            self.slice1.add_module(str(x), vgg_pretrained_features[x])
+        for x in range(12, 19):         # conv3_3
+            self.slice2.add_module(str(x), vgg_pretrained_features[x])
+        for x in range(19, 29):         # conv4_3
+            self.slice3.add_module(str(x), vgg_pretrained_features[x])
+        for x in range(29, 39):         # conv5_3
+            self.slice4.add_module(str(x), vgg_pretrained_features[x])
+
+        # fc6, fc7 without atrous conv
+        self.slice5 = torch.nn.Sequential(
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6),
+            nn.Conv2d(1024, 1024, kernel_size=1)
+        )
+
+    def forward(self, X):
+        h = self.slice1(X)
+        h_relu2_2 = h
+        h = self.slice2(h)
+        h_relu3_2 = h
+        h = self.slice3(h)
+        h_relu4_3 = h
+        h = self.slice4(h)
+        h_relu5_3 = h
+        h = self.slice5(h)
+        h_fc7 = h
+        out = [h_fc7, h_relu5_3, h_relu4_3, h_relu3_2, h_relu2_2]
+        return out
+
+
+class Double_conv(nn.Module):
+    def __init__(self, in_ch, mid_ch, out_ch):
+        super(Double_conv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch + mid_ch, mid_ch, kernel_size=1),
+            nn.BatchNorm2d(mid_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(mid_ch, out_ch, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
+class Craft(nn.Module):
+
+    def __init__(self):
+        super(Craft, self).__init__()
+        """ Base network """
+        self.backbone = Vgg16_bn()
+        # self.basenet = vgg16_bn()
+        """ U network """
+        self.upconv1 = Double_conv(1024, 512, 256)
+        self.upconv2 = Double_conv(512, 256, 128)
+        self.upconv3 = Double_conv(256, 128, 64)
+        self.upconv4 = Double_conv(128, 64, 32)
+        num_class = 2
+        self.conv_cls = nn.Sequential(
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1), nn.ReLU(inplace=True),
+            nn.Conv2d(32, 16, kernel_size=3, padding=1), nn.ReLU(inplace=True),
+            nn.Conv2d(16, 16, kernel_size=1), nn.ReLU(inplace=True),
+            nn.Conv2d(16, num_class, kernel_size=1),
+        )
+
+    def forward(self, x):
+        """ Base network """
+        sources = self.backbone(x)
+
+        """ U network """
+        y = torch.cat([sources[0], sources[1]], dim=1)
+        y = self.upconv1(y)
+
+        y = F.interpolate(y, size=sources[2].size()[
+                          2:], mode='bilinear', align_corners=False)
+        y = torch.cat([y, sources[2]], dim=1)
+        y = self.upconv2(y)
+
+        y = F.interpolate(y, size=sources[3].size()[
+                          2:], mode='bilinear', align_corners=False)
+        y = torch.cat([y, sources[3]], dim=1)
+        y = self.upconv3(y)
+
+        y = F.interpolate(y, size=sources[4].size()[
+                          2:], mode='bilinear', align_corners=False)
+        y = torch.cat([y, sources[4]], dim=1)
+        feature = self.upconv4(y)
+
+        y = self.conv_cls(feature)
+
+        return y.permute(0, 2, 3, 1)
