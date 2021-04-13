@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from torchvision import models
 
 
-
 class Vgg16_bn(torch.nn.Module):
     def __init__(self):
         super(Vgg16_bn, self).__init__()
@@ -14,16 +13,14 @@ class Vgg16_bn(torch.nn.Module):
         self.slice3 = torch.nn.Sequential()
         self.slice4 = torch.nn.Sequential()
         self.slice5 = torch.nn.Sequential()
-        for x in range(12):         # conv2_2
+        for x in range(12):
             self.slice1.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(12, 19):         # conv3_3
+        for x in range(12, 19):
             self.slice2.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(19, 29):         # conv4_3
+        for x in range(19, 29):
             self.slice3.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(29, 39):         # conv5_3
+        for x in range(29, 39):
             self.slice4.add_module(str(x), vgg_pretrained_features[x])
-
-        # fc6, fc7 without atrous conv
         self.slice5 = torch.nn.Sequential(
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
             nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6),
@@ -66,10 +63,7 @@ class Craft(nn.Module):
 
     def __init__(self):
         super(Craft, self).__init__()
-        """ Base network """
         self.backbone = Vgg16_bn()
-        # self.basenet = vgg16_bn()
-        """ U network """
         self.upconv1 = Double_conv(1024, 512, 256)
         self.upconv2 = Double_conv(512, 256, 128)
         self.upconv3 = Double_conv(256, 128, 64)
@@ -84,28 +78,20 @@ class Craft(nn.Module):
         )
 
     def forward(self, x):
-        """ Base network """
         sources = self.backbone(x)
-
-        """ U network """
         y = torch.cat([sources[0], sources[1]], dim=1)
         y = self.upconv1(y)
-
         y = F.interpolate(y, size=sources[2].size()[
                           2:], mode='bilinear', align_corners=False)
         y = torch.cat([y, sources[2]], dim=1)
         y = self.upconv2(y)
-
         y = F.interpolate(y, size=sources[3].size()[
                           2:], mode='bilinear', align_corners=False)
         y = torch.cat([y, sources[3]], dim=1)
         y = self.upconv3(y)
-
         y = F.interpolate(y, size=sources[4].size()[
                           2:], mode='bilinear', align_corners=False)
         y = torch.cat([y, sources[4]], dim=1)
         feature = self.upconv4(y)
-
         y = self.conv_cls(feature)
-
         return y.permute(0, 2, 3, 1)

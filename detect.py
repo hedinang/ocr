@@ -10,14 +10,14 @@ class Detect:
     def __init__(self, device):
         super(Detect, self).__init__()
         self.device = torch.device(device)
-        self.model = torch.load('/home/dung/Project/AI/yolov5/1.pth')
+        self.model = torch.load('detect.pth')
         self.model.to(self.device)
         self.half = False
         if device == 'cuda':
             self.model.half()
             self.half = True
         self.stride = int(self.model.stride.max())
-        self.conf_thres, self.iou_thres = 0.25, 0.45
+        self.conf_thres, self.iou_thres = 0.15, 0.45
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
         gain = min(img1_shape[0] / img0_shape[0],
@@ -139,16 +139,14 @@ class Detect:
         text = '{} {}'.format(area[5], score, decimals=2)
         cv2.putText(img, text, (x1, y1-2), 0, 1,
                     [150, 0, 0], thickness=2, lineType=cv2.LINE_AA)
-     
 
         return [x1, y1, x2, y2, area[5]]
 
     def __call__(self, img_path):
         img, origin = self.preprocess(img_path)
         rectangle = origin.copy()
-
         img = torch.from_numpy(img).to(self.device)
-        img = img.half() if self.half else img.float()  # uint8 to fp16/32
+        img = img.half() if self.half else img.float()
         img /= 255.0
         img = img.unsqueeze(0)
         pred = self.model(img)
@@ -171,7 +169,6 @@ class Detect:
                     if date == None or date[4] < conf:
                         date = [x1, y1, x2, y2, conf, 'date']
                 elif cls == 3:
-
                     if header == None or header[4] < conf:
                         header = [x1, y1, x2, y2, conf, 'header']
                 elif cls == 4:
@@ -183,6 +180,8 @@ class Detect:
                 elif cls == 6:
                     if stamp == None or stamp[4] < conf:
                         stamp = [x1, y1, x2, y2, conf, 'stamp']
+            if stamp != None:
+                return None
             if send != None:
                 send = self.draw(send, rectangle)
                 send.append(origin[send[1]:send[3], send[0]:send[2], :])
@@ -197,14 +196,10 @@ class Detect:
             if date != None:
                 date = self.draw(date, rectangle)
                 date.append(origin[date[1]:date[3], date[0]:date[2], :])
-            if stamp != None:
-                stamp = self.draw(stamp, rectangle)
-                stamp.append(
-                    origin[stamp[1]:stamp[3], stamp[0]:stamp[2], :])
             if quote != None:
                 quote = self.draw(quote, rectangle)
                 quote.append(
                     origin[quote[1]:quote[3], quote[0]:quote[2], :])
-        
-
-        return send, number, header, date, stamp, quote
+        cv2.imshow('aa', rectangle)
+        cv2.waitKey(0)
+        return [send, number, header, date, stamp, quote], rectangle

@@ -51,17 +51,17 @@ class Vocab:
 class Ocr:
     def __init__(self, device):
         super(Ocr, self).__init__()
-        vocab = open('/home/dung/Project/AI/ocr/vocab.txt', 'r').readline()
+        vocab = open('vocab.txt', 'r').readline()
         self.vocab = Vocab(vocab)
         self.device = torch.device(device)
         self.craft = Craft()
         self.craft.load_state_dict(torch.load(
-            '/home/dung/Project/AI/ocr/craft.pth', map_location=device))
+            'craft.pth', map_location=device))
         self.craft.to(device)
         self.craft.eval()
         self.transformer = Transformer(len(self.vocab))
         self.transformer.load_state_dict(torch.load(
-            '/home/dung/Project/AI/ocr/ocr.pth', map_location=device))
+            'ocr.pth', map_location=device))
         self.transformer.to(device)
         self.transformer.eval()
         self.image_height = 32

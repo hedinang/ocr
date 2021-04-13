@@ -10,10 +10,25 @@ class Process:
         self.ocr = Ocr(device)
 
     def __call__(self, img_path):
-        queue = self.detect(img_path)
-        results = {}
-        for e in queue:
-            if e != None:
-                result = self.ocr(e[5])
-                results[e[4]] = result
+        queue, rectangle = self.detect(img_path)
+        results = {
+            'send': [],
+            'number': [],
+            'header': [],
+            'date': [],
+            'stamp': [],
+            'quote': [],
+        }
+        if queue != None:
+            for e in queue:
+                if e != None:
+                    sub_ocr = self.ocr(e[5])
+                    if e[4] != 'header' or len(sub_ocr) == 1:
+                        result = sub_ocr
+                    else:
+                        result = [sub_ocr[0]]
+                        results['quote'] += sub_ocr[1:]
+                    results[e[4]] = result
+        else:
+            results['stamp'] = True
         return results
