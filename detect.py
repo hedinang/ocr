@@ -10,35 +10,35 @@ class Detect:
     def __init__(self, device):
         super(Detect, self).__init__()
         self.device = torch.device(device)
-        self.model = torch.load('detect.pth')
+        self.model = torch.load('1.pth')
         self.model.to(self.device)
         self.half = False
         if device == 'cuda':
             self.model.half()
             self.half = True
         self.stride = int(self.model.stride.max())
-        self.conf_thres, self.iou_thres = 0.15, 0.45
+        self.conf_thres, self.iou_thres = 0.6, 0.6
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
         gain = min(img1_shape[0] / img0_shape[0],
-                   img1_shape[1] / img0_shape[1])  # gain  = old / new
+                   img1_shape[1] / img0_shape[1])
         pad = (img1_shape[1] - img0_shape[1] * gain) / \
-            2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-        coords[:, [0, 2]] -= pad[0]  # x padding
-        coords[:, [1, 3]] -= pad[1]  # y padding
+            2, (img1_shape[0] - img0_shape[0] * gain) / 2
+        coords[:, [0, 2]] -= pad[0]
+        coords[:, [1, 3]] -= pad[1]
         coords[:, :4] /= gain
-        coords[:, 0].clamp_(0, img0_shape[1])  # x1
-        coords[:, 1].clamp_(0, img0_shape[0])  # y1
-        coords[:, 2].clamp_(0, img0_shape[1])  # x2
-        coords[:, 3].clamp_(0, img0_shape[0])  # y2
+        coords[:, 0].clamp_(0, img0_shape[1])
+        coords[:, 1].clamp_(0, img0_shape[0])
+        coords[:, 2].clamp_(0, img0_shape[1])
+        coords[:, 3].clamp_(0, img0_shape[0])
         return coords
 
     def xywh2xyxy(self, x):
         y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
-        y[:, 0] = x[:, 0] - x[:, 2] / 2  # top left x
-        y[:, 1] = x[:, 1] - x[:, 3] / 2  # top left y
-        y[:, 2] = x[:, 0] + x[:, 2] / 2  # bottom right x
-        y[:, 3] = x[:, 1] + x[:, 3] / 2  # bottom right y
+        y[:, 0] = x[:, 0] - x[:, 2] / 2
+        y[:, 1] = x[:, 1] - x[:, 3] / 2
+        y[:, 2] = x[:, 0] + x[:, 2] / 2
+        y[:, 3] = x[:, 1] + x[:, 3] / 2
         return y
 
     def box_iou(self, box1, box2):
@@ -129,22 +129,22 @@ class Detect:
         img = np.ascontiguousarray(img)
         return img, origin
 
-    def draw(self, area, img):
-        color = color = (0, 0, 150)
+    def draw(self, area):
+        color = (0, 0, 150)
         x1, y1, x2, y2 = int(area[0]), int(area[1]), int(area[2]), int(area[3])
-        cv2.rectangle(img, (x1, y1), (x2, y2), color,
-                      thickness=1, lineType=cv2.LINE_AA)
-        score = area[4].cpu().detach().numpy().item()
-        score = round(score, 2)
-        text = '{} {}'.format(area[5], score, decimals=2)
-        cv2.putText(img, text, (x1, y1-2), 0, 1,
-                    [150, 0, 0], thickness=2, lineType=cv2.LINE_AA)
+        # cv2.rectangle(img, (x1, y1), (x2, y2), color,
+        #               thickness=1, lineType=cv2.LINE_AA)
+        # score = area[4].cpu().detach().numpy().item()
+        # score = round(score, 2)
+        # text = '{} {}'.format(area[5], score, decimals=2)
+        # cv2.putText(img, text, (x1, y1-2), 0, 1,
+        #             [150, 0, 0], thickness=2, lineType=cv2.LINE_AA)
 
-        return [x1, y1, x2, y2, area[5]]
+        return [x1, y1, x2, y2]
 
     def __call__(self, img_path):
         img, origin = self.preprocess(img_path)
-        rectangle = origin.copy()
+        # rectangle = origin.copy()
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()
         img /= 255.0
@@ -183,23 +183,26 @@ class Detect:
             if stamp != None:
                 return None
             if send != None:
-                send = self.draw(send, rectangle)
+                send = self.draw(send)
                 send.append(origin[send[1]:send[3], send[0]:send[2], :])
+                send.append('send')
             if number != None:
-                number = self.draw(number, rectangle)
+                number = self.draw(number)
                 number.append(
                     origin[number[1]:number[3], number[0]:number[2], :])
+                number.append('number')
             if header != None:
-                header = self.draw(header, rectangle)
+                header = self.draw(header)
                 header.append(
                     origin[header[1]:header[3], header[0]:header[2], :])
+                header.append('header')
             if date != None:
-                date = self.draw(date, rectangle)
+                date = self.draw(date)
                 date.append(origin[date[1]:date[3], date[0]:date[2], :])
+                date.append('date')
             if quote != None:
-                quote = self.draw(quote, rectangle)
+                quote = self.draw(quote)
                 quote.append(
                     origin[quote[1]:quote[3], quote[0]:quote[2], :])
-        cv2.imshow('aa', rectangle)
-        cv2.waitKey(0)
-        return [send, number, header, date, stamp, quote], rectangle
+                quote.append('quote')
+        return [send, number, header, date, stamp, quote]

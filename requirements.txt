@@ -4,5 +4,4 @@ pdf2image==1.14.0
 torch==1.8.1
 torchvision==0.9.1
 pillow==8.2.0
-schedule==1.1.0
 pycrypto==2.6.1

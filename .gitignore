@@ -2,3 +2,8 @@ __pycache__
 *.png
 *.pdf
 *.pth
+build
+dist
+route.spec
+thutu.txt
+.vscode

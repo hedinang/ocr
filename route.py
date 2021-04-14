@@ -4,13 +4,11 @@ import os
 from pdf2image import convert_from_path
 from datetime import datetime
 from process import Process
-from threading import Thread
-import schedule
 from time import time
 import datetime
 from Crypto.Cipher import AES
 import base64
-
+import models
 app = Flask(__name__)
 
 
@@ -22,6 +20,15 @@ def get():
 @app.route('/process', methods=['POST'])
 def processUrl():
     if request.method == 'POST':
+        global count
+        count += 1
+        if count % 100 == 0 and time() > time2float(datetime.datetime(y, m, d)):
+            count = 1
+            global pause
+            pause = True
+            return('Đây là phiên bản thương mại của ứng dụng trích xuất thông tin\
+                văn bản hành chính\n Xin hãy liên hệ với chúng tôi nếu muốn tiếp tục \
+                sử dụng thông qua số điện thoại: 0392200524 hoặc email: 20130704@student.hust.edu.vn')
         if pause == False:
             filename = None
             img_name = None
@@ -58,23 +65,22 @@ def active():
         cipher = AES.new(secret_key, AES.MODE_ECB)
         decoded = cipher.decrypt(base64.b64decode(key))
         decoded = decoded.decode('utf-8').split(' ')
-        code = []
-        for e in decoded:
-            code.append('{}\n'.format(e))
-        file = open('lcs.txt', 'r')
-
-        ls = file.readlines()
-
-        if ls[0] != code[0]:
+        file = open('4.txt', 'r')
+        ls = cipher.decrypt(base64.b64decode(file.read()))
+        ls = ls.decode('utf-8').split(' ')
+        if ls[0] != decoded[0]:
             return 'Key này không có hiệu lực xin hãy liên hệ với chúng tôi nếu muốn tiếp tục \
                 sử dụng thông qua số điện thoại: 0392200524 hoặc email: 20130704@student.hust.edu.vn'
         else:
             file.close()
-            os.remove('lcs.txt')
-            file = open('lcs.txt', 'a')
-            file.writelines(code)
+            os.remove('4.txt')
+            file = open('4.txt', 'a')
+            file.write(key)
             file.close()
-        return decoded
+            global pause, y, m, d
+            pause, y, m, d = False, int(decoded[1]), int(
+                decoded[2]), int(decoded[3])
+        return 'Licence được gia hạn thành công đến ngày {} tháng {} năm {}'.format(d, m, y)
 
 
 def time2float(t):
@@ -83,26 +89,44 @@ def time2float(t):
     return total_seconds
 
 
-def job():
-    if time() < time2float(datetime.datetime(2021, 4, 12)):
-        return
+def initiation():
+    file = open('4.txt', 'r')
+    secret_key = '123456789012345a'
+    cipher = AES.new(secret_key, AES.MODE_ECB)
+    ls = cipher.decrypt(base64.b64decode(file.read()))
+    ls = ls.decode('utf-8').split(' ')
+    y, m, d = int(ls[1]), int(ls[2]), int(ls[3])
+    if time() < time2float(datetime.datetime(y, m, d)):
+        return False, y, m, d, 1
     print('Đây là phiên bản thương mại của ứng dụng trích xuất thông tin\
     văn bản hành chính\n Xin hãy liên hệ với chúng tôi nếu muốn tiếp tục \
         sử dụng thông qua số điện thoại: 0392200524 hoặc email: 20130704@student.hust.edu.vn')
-    global pause
-    pause = True
-    print('aaa')
-
-
-def licence():
-    schedule.every().day.at('16:02:55').do(job)
-    while True:
-        schedule.run_pending()
+    return True, y, m, d, 1
 
 
 if __name__ == '__main__':
-    pause = False
-    lcs = Thread(target=licence)
-    lcs.start()
-    process = Process('cuda')
-    app.run(host='0.0.0.0', port=5000)
+    print('Bạn có muốn cài đặt ứng dụng với cuda ndivia không?(y/n)\
+    Hãy chắc chắn máy tính của bạn có cuda nếu muốn sử dụng !')
+    pause, y, m, d, count = initiation()
+    while True:
+        cuda = input()
+        if cuda.lower() == 'y':
+            process = Process('cuda')
+            print('Ứng dụng được khởi động với cuda')
+            break
+        elif cuda.lower() == 'n':
+            print('Ứng dụng được khởi động với cpu')
+            process = Process('cpu')
+            break
+        else:
+            print('Hãy chọn y hoặc n !')
+    print('Hãy chọn cổng bạn muốn cài đặt ứng dụng và chắc chắn rằng nó chưa được sử dụng !')
+    while True:
+        port = input()
+        try:
+            port = int(port)
+            print('Ứng dụng được khởi động trên cổng ', port)
+            break
+        except Exception:
+            print('Cổng cài đặt ứng dụng chưa đúng, xin chọn lại !')
+    app.run(host='0.0.0.0', port=port)

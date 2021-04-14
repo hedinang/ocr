@@ -51,17 +51,17 @@ class Vocab:
 class Ocr:
     def __init__(self, device):
         super(Ocr, self).__init__()
-        vocab = open('vocab.txt', 'r').readline()
+        vocab = open('5.txt', 'r').readline()
         self.vocab = Vocab(vocab)
         self.device = torch.device(device)
         self.craft = Craft()
         self.craft.load_state_dict(torch.load(
-            'craft.pth', map_location=device))
+            '2.pth', map_location=device))
         self.craft.to(device)
         self.craft.eval()
         self.transformer = Transformer(len(self.vocab))
         self.transformer.load_state_dict(torch.load(
-            'ocr.pth', map_location=device))
+            '3.pth', map_location=device))
         self.transformer.to(device)
         self.transformer.eval()
         self.image_height = 32
@@ -306,5 +306,6 @@ class Ocr:
             sub_img = img[ele[2]:ele[3], ele[0]:ele[1], :]
             sub_img = self.process_input(sub_img)
             sub_img = sub_img.to(self.device)
-            result.append(self.translate_beam_search(sub_img))
+            txt = self.translate_beam_search(sub_img)
+            result.append(txt)
         return result
