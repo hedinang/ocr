@@ -65,7 +65,7 @@ def active():
         cipher = AES.new(secret_key, AES.MODE_ECB)
         decoded = cipher.decrypt(base64.b64decode(key))
         decoded = decoded.decode('utf-8').split(' ')
-        file = open('4.txt', 'r')
+        file = open('4.txt', 'r', encoding="utf8")
         ls = cipher.decrypt(base64.b64decode(file.read()))
         ls = ls.decode('utf-8').split(' ')
         if ls[0] != decoded[0]:
@@ -74,7 +74,7 @@ def active():
         else:
             file.close()
             os.remove('4.txt')
-            file = open('4.txt', 'a')
+            file = open('4.txt', 'a', encoding="utf8")
             file.write(key)
             file.close()
             global pause, y, m, d
@@ -90,7 +90,7 @@ def time2float(t):
 
 
 def initiation():
-    file = open('4.txt', 'r')
+    file = open('4.txt', 'r', encoding="utf8")
     secret_key = '123456789012345a'
     cipher = AES.new(secret_key, AES.MODE_ECB)
     ls = cipher.decrypt(base64.b64decode(file.read()))

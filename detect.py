@@ -17,7 +17,7 @@ class Detect:
             self.model.half()
             self.half = True
         self.stride = int(self.model.stride.max())
-        self.conf_thres, self.iou_thres = 0.6, 0.6
+        self.conf_thres, self.iou_thres = 0.25, 0.45
 
     def scale_coords(self, img1_shape, coords, img0_shape, ratio_pad=None):
         gain = min(img1_shape[0] / img0_shape[0],

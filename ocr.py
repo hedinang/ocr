@@ -51,7 +51,7 @@ class Vocab:
 class Ocr:
     def __init__(self, device):
         super(Ocr, self).__init__()
-        vocab = open('5.txt', 'r').readline()
+        vocab = open('5.txt', 'r', encoding="utf8").readline()
         self.vocab = Vocab(vocab)
         self.device = torch.device(device)
         self.craft = Craft()
