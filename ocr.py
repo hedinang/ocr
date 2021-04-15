@@ -288,19 +288,23 @@ class Ocr:
             encode = [1] + [int(i) for i in hypothesises[0][:-1]]
             return self.vocab.decode(encode)
 
-    def __call__(self, img, min_size=20, text_threshold=0.7, low_text=0.4,
+    def __call__(self, img, label, min_size=20, text_threshold=0.7, low_text=0.4,
                  link_threshold=0.4, canvas_size=2560, mag_ratio=1.,
                  slope_ths=0.8, ycenter_ths=0.5, height_ths=1,
                  width_ths=1, add_margin=0.1):
         img = np.array(img)[:, :, :3]
-        text_box = self.get_textbox(
-            img, text_threshold, link_threshold, low_text)
-        horizontal_list = self.group_text_box(text_box, slope_ths,
-                                              ycenter_ths, height_ths,
-                                              width_ths, add_margin)
-        horizontal_list = [i for i in horizontal_list if max(
-            i[1]-i[0], i[3]-i[2]) > 10]
+        if label != 'date':
+            text_box = self.get_textbox(
+                img, text_threshold, link_threshold, low_text)
+            horizontal_list = self.group_text_box(text_box, slope_ths,
+                                                  ycenter_ths, height_ths,
+                                                  width_ths, add_margin)
+            horizontal_list = [i for i in horizontal_list if max(
+                i[1]-i[0], i[3]-i[2]) > 10]
+        else:
+            horizontal_list = [[0,  img.shape[1], 0, img.shape[0]]]
         result = []
+
         for ele in horizontal_list:
             ele = [0 if i < 0 else i for i in ele]
             sub_img = img[ele[2]:ele[3], ele[0]:ele[1], :]

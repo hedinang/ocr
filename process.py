@@ -22,7 +22,7 @@ class Process:
         if queue != None:
             for e in queue:
                 if e != None:
-                    sub_ocr = self.ocr(e[4])
+                    sub_ocr = self.ocr(e[4], e[5])
                     if e[5] != 'header' or len(sub_ocr) == 1:
                         result = sub_ocr
                     else:
