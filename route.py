@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, send_file
 from werkzeug.utils import secure_filename
 import os
-from pdf2image import convert_from_path
 from datetime import datetime
 from process import Process
 from time import time
@@ -9,6 +8,7 @@ import datetime
 from Crypto.Cipher import AES
 import base64
 import models
+import fitz.fitz as fitz
 app = Flask(__name__)
 
 
@@ -38,11 +38,12 @@ def processUrl():
                 img_name = filename
                 f.save(secure_filename(filename))
                 if 'pdf' in filename.lower():
-                    filename.split('.')[0]
-                    img_name = '{}.png'.format(filename.split('.')[0])
-                    pages = convert_from_path(
-                        filename, 500, size=1200)
-                    pages[0].save(img_name, 'png')
+                    img_name = '{}.PNG'.format(filename.split('.')[0])
+                    pages = fitz.open(filename)
+                    page = pages.loadPage(0)
+                    pix = page.getPixmap()
+                    pix.writePNG(img_name)
+                    pages.close()
                 return process(img_name)
             except:
                 return 'Error'
@@ -105,9 +106,9 @@ def initiation():
 
 
 if __name__ == '__main__':
+    pause, y, m, d, count = initiation()
     print('Bạn có muốn cài đặt ứng dụng với cuda ndivia không?(y/n)\
     Hãy chắc chắn máy tính của bạn có cuda nếu muốn sử dụng !')
-    pause, y, m, d, count = initiation()
     while True:
         cuda = input()
         if cuda.lower() == 'y':

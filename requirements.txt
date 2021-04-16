@@ -5,3 +5,4 @@ torch==1.8.1
 torchvision==0.9.1
 pillow==8.2.0
 pycrypto==2.6.1
+PyMuPDF==1.18.12
